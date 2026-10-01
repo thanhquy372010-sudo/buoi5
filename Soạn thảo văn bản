@@ -1,0 +1,217 @@
+using System.Drawing.Text;
+
+namespace Tuan5
+{
+    public partial class frmSoanThao : Form
+    {
+        private string currentFilePath = "";
+
+        public frmSoanThao()
+        {
+            InitializeComponent();
+        }
+
+        private void frmSoanThao_Load(object sender, EventArgs e)
+        {
+            InstalledFontCollection installedFonts = new InstalledFontCollection();
+            foreach (FontFamily font in installedFonts.Families)
+            {
+                cmbFonts.Items.Add(font.Name);
+            }
+
+            int[] sizes = { 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72 };
+            foreach (int size in sizes)
+            {
+                cmbSizes.Items.Add(size);
+            }
+
+            ResetToDefaultSettings();
+        }
+
+        private void ResetToDefaultSettings()
+        {
+            richText.Clear();
+            richText.Font = new Font("Tahoma", 14, FontStyle.Regular);
+            cmbFonts.SelectedItem = "Tahoma";
+            cmbSizes.SelectedItem = 14;
+            currentFilePath = "";
+            CapNhatSoTu();
+        }
+
+        private void statusStrip1_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+        }
+
+        private void tsmiTaoMoi_Click(object sender, EventArgs e)
+        {
+            ResetToDefaultSettings();
+        }
+
+        private void tsmiMoTapTin_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openDlg = new OpenFileDialog();
+            openDlg.Filter = "Rich Text Format (*.rtf)|*.rtf|Text Files (*.txt)|*.txt|All Files (*.*)|*.*";
+
+            if (openDlg.ShowDialog() == DialogResult.OK)
+            {
+                currentFilePath = openDlg.FileName;
+                string extension = Path.GetExtension(currentFilePath).ToLower();
+
+                if (extension == ".rtf")
+                {
+                    richText.LoadFile(currentFilePath, RichTextBoxStreamType.RichText);
+                }
+                else
+                {
+                    richText.Text = File.ReadAllText(currentFilePath);
+                }
+            }
+        }
+
+        private void SaveDocument(string filePath)
+        {
+            string extension = Path.GetExtension(filePath).ToLower();
+            if (extension == ".rtf")
+            {
+                richText.SaveFile(filePath, RichTextBoxStreamType.RichText);
+            }
+            else
+            {
+                File.WriteAllText(filePath, richText.Text);
+            }
+        }
+
+        private void tsmiLuu_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(currentFilePath))
+            {
+                SaveFileDialog saveDlg = new SaveFileDialog();
+                saveDlg.Filter = "Rich Text Format (*.rtf)|*.rtf|Text Files (*.txt)|*.txt";
+                saveDlg.DefaultExt = "rtf";
+
+                if (saveDlg.ShowDialog() == DialogResult.OK)
+                {
+                    currentFilePath = saveDlg.FileName;
+                    SaveDocument(currentFilePath);
+                    MessageBox.Show("Lưu văn bản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+                SaveDocument(currentFilePath);
+                MessageBox.Show("Lưu văn bản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void tsmiThoat_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void tsmiDinhDang_Click(object sender, EventArgs e)
+        {
+            FontDialog fontDlg = new FontDialog();
+            fontDlg.ShowColor = true;
+            fontDlg.ShowApply = true;
+            fontDlg.ShowEffects = true;
+            fontDlg.ShowHelp = true;
+
+            if (fontDlg.ShowDialog() != DialogResult.Cancel)
+            {
+                richText.ForeColor = fontDlg.Color;
+                richText.SelectionFont = fontDlg.Font;
+            }
+        }
+
+        private void ToggleFontStyle(FontStyle style)
+        {
+            Font currentFont = richText.SelectionFont ?? richText.Font;
+            FontStyle newStyle;
+
+            if (currentFont.Style.HasFlag(style))
+                newStyle = currentFont.Style & ~style;
+            else
+                newStyle = currentFont.Style | style;
+
+            richText.SelectionFont = new Font(currentFont.FontFamily, currentFont.Size, newStyle);
+        }
+
+        private void btnBold_Click(object sender, EventArgs e)
+        {
+            ToggleFontStyle(FontStyle.Bold);
+        }
+
+        private void btnItalic_Click(object sender, EventArgs e)
+        {
+            ToggleFontStyle(FontStyle.Italic);
+        }
+
+        private void btnUnderline_Click(object sender, EventArgs e)
+        {
+            ToggleFontStyle(FontStyle.Underline);
+        }
+
+        private void cmbFonts_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrWhiteSpace(cmbFonts.Text))
+            {
+                string fontName = cmbFonts.Text;
+                Font currentFont = richText.SelectionFont ?? richText.Font;
+
+                try
+                {
+                    richText.SelectionFont = new Font(fontName, currentFont.Size, currentFont.Style);
+                    richText.Focus();
+                }
+                catch { }
+            }
+        }
+
+        private void cmbSizes_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if(!string.IsNullOrWhiteSpace(cmbSizes.Text))
+    {
+                if (float.TryParse(cmbSizes.Text, out float fontSize) && fontSize > 0)
+                {
+                    Font currentFont = richText.SelectionFont ?? richText.Font;
+
+                    try
+                    {
+                        richText.SelectionFont = new Font(currentFont.FontFamily, fontSize, currentFont.Style);
+                        richText.Focus();
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        private void richText_TextChanged(object sender, EventArgs e)
+        {
+            CapNhatSoTu();
+        }
+
+        private void CapNhatSoTu()
+        {
+            string text = richText.Text.Trim();
+            if (string.IsNullOrEmpty(text))
+            {
+                lblStatus.Text = "Tổng số từ: 0";
+            }
+            else
+            {
+                string[] words = text.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                lblStatus.Text = $"Tổng số từ: {words.Length}";
+            }
+        }
+
+        private void btnTaoMoi_Click(object sender, EventArgs e)
+        {
+            ResetToDefaultSettings();
+        }
+
+        private void btnLuu_Click(object sender, EventArgs e)
+        {
+            tsmiLuu_Click(sender, e);
+        }
+    }
+}
